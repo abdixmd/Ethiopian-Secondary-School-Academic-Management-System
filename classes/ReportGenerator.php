@@ -163,7 +163,9 @@ class ReportGenerator {
                 'entity' => $row['table_name'],
                 'icon' => $icon,
                 'time_ago' => $timeAgo,
-                'timestamp' => $row['timestamp']
+                'timestamp' => $row['timestamp'],
+                'status' => 'success', // Default status
+                'role' => 'User' // Default role
             ];
         }
         
@@ -216,12 +218,81 @@ class ReportGenerator {
             $notifications[] = [
                 'type' => $row['type'],
                 'message' => $row['message'],
-                'icon' => $row['icon'],
-                'link' => $row['link']
+                'icon' => $row['icon'] ?? 'bell',
+                'link' => $row['link'] ?? '#',
+                'title' => $row['title'] ?? 'Notification',
+                'time_ago' => $this->timeAgo($row['created_at']),
+                'unread' => !$row['is_read'],
+                'color' => '#4e73df'
             ];
         }
         
         return $notifications;
+    }
+
+    public function getSystemStatus() {
+        // Placeholder for system status
+        return [
+            [
+                'name' => 'Database',
+                'description' => 'MySQL Database Server',
+                'status' => 'online',
+                'uptime' => '99.9%'
+            ],
+            [
+                'name' => 'Web Server',
+                'description' => 'Apache HTTP Server',
+                'status' => 'online',
+                'uptime' => '99.9%'
+            ],
+            [
+                'name' => 'Email Service',
+                'description' => 'SMTP Relay',
+                'status' => 'online',
+                'uptime' => '99.5%'
+            ]
+        ];
+    }
+
+    public function getTopPerformingStudents($limit = 5) {
+        $students = [];
+        
+        $result = $this->conn->query("
+            SELECT s.id, s.first_name, s.last_name, s.grade_level, AVG(a.obtained_score) as average
+            FROM students s
+            JOIN assessments a ON s.id = a.student_id
+            GROUP BY s.id
+            ORDER BY average DESC
+            LIMIT $limit
+        ");
+        
+        while ($row = $result->fetch_assoc()) {
+            $students[] = [
+                'id' => $row['id'],
+                'name' => $row['first_name'] . ' ' . $row['last_name'],
+                'grade' => $row['grade_level'],
+                'average' => round($row['average'], 1),
+                'trend' => 5.2 // Placeholder trend
+            ];
+        }
+        
+        return $students;
+    }
+
+    public function getRecentAnnouncements($limit = 3) {
+        $announcements = [];
+        
+        $result = $this->conn->query("
+            SELECT * FROM announcements 
+            ORDER BY created_at DESC 
+            LIMIT $limit
+        ");
+        
+        while ($row = $result->fetch_assoc()) {
+            $announcements[] = $row;
+        }
+        
+        return $announcements;
     }
     
     public function generateStudentReport($studentId, $format = 'pdf') {
